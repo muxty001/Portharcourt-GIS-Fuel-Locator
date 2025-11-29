@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fuel Price Map – Port Harcourt</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <header class="glass">
+      <h1>Fuel Price Mapping System – Port Harcourt</h1>
+
+      <div id="search-container">
+        <input
+          id="searchBox"
+          type="text"
+          placeholder="Search for filling station…"
+        />
+        <ul id="foundList"></ul>
+      </div>
+      <div class="filters">
+        <select id="priceFilter">
+          <option value="all">Filter by PMS Price</option>
+          <option value="cheap">₦850 – ₦900 (Cheap)</option>
+          <option value="medium">₦901 – ₦950 (Medium)</option>
+          <option value="expensive">₦951 – ₦1200 (Expensive)</option>
+        </select>
+
+        <select id="queueFilter">
+          <option value="all">Filter by Queue</option>
+          <option value="None">No Queue</option>
+          <option value="Short">Short Queue</option>
+          <option value="Medium">Medium Queue</option>
+          <option value="Long">Long Queue</option>
+        </select>
+      </div>
+    </header>
+
+    <div id="dashboard" class="glass">
+      <h2>Cheapest 5 Stations (PMS)</h2>
+      <ul id="cheapestList"></ul>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

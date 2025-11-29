@@ -1,0 +1,115 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f3f3f3;
+}
+
+/* Header */
+header {
+    background: #0d6efd;
+    /* color: white; */
+    padding: 20px 10px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+#search-container {
+        margin: auto;
+        width: 90%;
+        display: flex;
+        flex-flow: row wrap;
+        justify-content: center;
+
+}
+
+.station-item {
+    width: 100%;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.station-item:hover {
+    background: #e8f0ff; /* light blue hover */
+}
+
+
+/* Search box */
+#searchBox {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    outline: none;
+}
+
+
+
+#foundList {
+    font-size: 16px;
+    padding: 0;
+    list-style: none;
+    width: 100%;
+    background-color: white;
+}
+
+/* Responsive Map */
+#map {
+    height: 500px;
+    width: 100%;
+    margin-top: 15px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.leaflet-popup-content {
+    line-height: 1.5;
+}
+
+/* Glassmorphism Container (fixed) */
+.glass {
+    /* background: rgba(255, 255, 255, 0.85); */
+    /* backdrop-filter: blur(2px); */
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px auto;
+    width: 95%;
+    max-width: 800px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+/* Filter Section */
+.filters {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.filters select {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    outline: none;
+}
+
+/* Dashboard */
+#dashboard {
+    margin-top: 10px;
+}
+
+#dashboard ul {
+    list-style: none;
+    padding: 0;
+}
+
+#dashboard li {
+    background: white;
+    margin: 5px 0;
+    padding: 12px;
+    font-size: 15px;
+    border-left: 5px solid green;
+    border-radius: 5px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
