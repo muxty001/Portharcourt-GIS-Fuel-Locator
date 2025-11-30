@@ -7,6 +7,20 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
 }).addTo(map);
 
+const input = document.getElementById("searchBox");
+const container = document.getElementById("foundList");
+
+input.addEventListener("blur", () => {
+  setTimeout(() => {
+    // Only hide if the newly focused element is NOT inside container
+    const active = document.activeElement;
+    if (!container.contains(active)) {
+      let list = document.getElementById("foundList");
+      list.innerHTML = "";
+    }
+  }, 120); // <-- key: small delay so clicks on results can run first
+});
+
 let stationLayer;
 let allFeatures = []; // stores all stations
 
@@ -16,7 +30,13 @@ let allFeatures = []; // stores all stations
 fetch("map.geojson")
   .then((res) => res.json())
   .then((data) => {
-    allFeatures = data.features;
+    allFeatures = data.features.map((f) => ({
+      ...f,
+      price:
+        Number(f.properties["Price of  PMS"]) <= 850
+          ? 850
+          : Number(f.properties["Price of  PMS"]) || 0,
+    }));
 
     stationLayer = L.geoJSON(data, {
       onEachFeature: function (feature, layer) {
@@ -51,7 +71,9 @@ fetch("map.geojson")
       },
     }).addTo(map);
 
-    updateDashboard(); // Update cheapest 5
+    // console.log({ allFeatures });
+
+    updateDashboard(allFeatures); // Update cheapest 5
   });
 
 // =========================
@@ -71,11 +93,11 @@ document
     let list = document.getElementById("foundList");
     list.innerHTML = "";
 
- filteredStation.forEach((station) => {
-    const p = station.properties;
+    filteredStation.forEach((station) => {
+      const p = station.properties;
 
-    list.innerHTML += `
-      <li class="station-item" onclick="searchStation('${text}')">
+      list.innerHTML += `
+      <li class="station-item" data-name='${p["Name of filling Station"]}' onclick="searchStation(this)">
           <b>${p["Name of filling Station"]}</b><br>
           <span style="margin-right: 10px;">PMS: ₦${p["Price of  PMS"]}</span>
           <span style="margin-right: 10px;">AGO: ₦${p["Price of  A.G.O"]}</span>
@@ -83,26 +105,23 @@ document
           <span style="margin-right: 10px;">LPG: ₦${p["Price of  L.G.P"]}</span>
       </li>
     `;
-});
-
-
+    });
   });
 
 // =========================
 // SEARCH BUTTON
 // =========================
-document.getElementById("searchBtn").addEventListener("click", function () {
-  let text = document.getElementById("searchBox").value.toLowerCase();
+// document.getElementById("searchBtn").addEventListener("click", function () {
+//   let text = document.getElementById("searchBox").value.toLowerCase();
 
-  searchStation(text);
-});
+//   searchStation(text);
+// });
 
-function searchStation(text) {
+function searchStation(el) {
   stationLayer.eachLayer(function (layer) {
-    const name =
-      layer.feature.properties["Name of filling Station"].toLowerCase();
+    const name = layer.feature.properties["Name of filling Station"];
 
-    if (name.includes(text)) {
+    if (name.includes(el.dataset.name)) {
       layer.setStyle({ radius: 10, color: "blue" });
       map.panTo(layer.getLatLng());
       layer.openPopup();
@@ -119,42 +138,51 @@ document.getElementById("priceFilter").addEventListener("change", applyFilters);
 document.getElementById("queueFilter").addEventListener("change", applyFilters);
 
 function applyFilters() {
-  let priceFilter = document.getElementById("priceFilter").value;
-  let queueFilter = document.getElementById("queueFilter").value;
+  const priceFilter = document.getElementById("priceFilter").value;
+  const queueFilter = document.getElementById("queueFilter").value;
 
-  stationLayer.eachLayer(function (layer) {
-    let p = layer.feature.properties;
+  let filteredData;
 
-    let price = Number(p["Price of  PMS"]) || 0;
-    let queue = p["Queue Status"];
+  //To filter Cheap
+  if (priceFilter === "cheap")
+    filteredData = allFeatures.filter((f) => f.price >= 850 && f.price <= 950);
 
-    let priceMatch =
-      priceFilter === "all" ||
-      (priceFilter === "cheap" && price <= 900) ||
-      (priceFilter === "medium" && price > 900 && price <= 950) ||
-      (priceFilter === "expensive" && price > 950);
+  if (priceFilter === "medium")
+    filteredData = allFeatures.filter((f) => f.price >= 901 && f.price <= 950);
+  if (priceFilter === "expensive")
+    filteredData = allFeatures.filter((f) => f.price >= 951 && f.price <= 1200);
+  if (priceFilter === "all_pms") filteredData = allFeatures;
 
-    let queueMatch = queueFilter === "all" || queue === queueFilter;
+  updateDashboard(filteredData);
 
-    if (priceMatch && queueMatch) {
-      layer.addTo(map);
-    } else {
-      map.removeLayer(layer);
-    }
-  });
+  // stationLayer.eachLayer(function (layer) {
+  //   let p = layer.feature.properties;
+
+  //   let price = Number(p["Price of  PMS"]) || 0;
+  //   let queue = p["Queue Status"];
+
+  //   // let priceMatch =
+  //   //   priceFilter === "all" ||
+  //   //   (priceFilter === "cheap" && price <= 900) ||
+  //   //   (priceFilter === "medium" && price > 900 && price <= 950) ||
+  //   //   (priceFilter === "expensive" && price > 950);
+
+  //   // let queueMatch = queueFilter === "all" || queue === queueFilter;
+
+  //   // if (priceMatch && queueMatch) {
+  //   //   layer.addTo(map);
+  //   // } else {
+  //   //   map.removeLayer(layer);
+  //   // }
+  // });
 }
 
 // =========================
 // DASHBOARD – CHEAPEST 5
 // =========================
-function updateDashboard() {
-  let sorted = [...allFeatures]
-    .map((f) => ({
-      ...f,
-      price: Number(f.properties["Price of  PMS"]) || 0,
-    }))
-    .filter((f) => f.price > 300) // remove zeros & bad values
-    .sort((a, b) => a.price - b.price);
+function updateDashboard(allFeatures) {
+  console.log({ allFeatures });
+  let sorted = allFeatures.sort((a, b) => a.price - b.price);
 
   let cheapest = sorted.slice(0, 5);
 
