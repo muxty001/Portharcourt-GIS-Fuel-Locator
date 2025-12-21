@@ -1,6 +1,6 @@
-// =========================
-// INITIALIZE MAP
-// =========================
+
+//To Initialize the map
+
 var map = L.map("map").setView([4.85, 6.95], 12);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -24,9 +24,9 @@ input.addEventListener("blur", () => {
 let stationLayer;
 let allFeatures = []; // stores all stations
 
-// =========================
-// LOAD GEOJSON
-// =========================
+
+// Loads GEOJSON
+
 fetch("map.geojson")
   .then((res) => res.json())
   .then((data) => {
@@ -76,9 +76,9 @@ fetch("map.geojson")
     updateDashboard(allFeatures); // Update cheapest 5
   });
 
-// =========================
+
 // SEARCH (KEYUP)
-// =========================
+ 
 document
   .getElementById("searchBox")
   .addEventListener("keyup", async function () {
@@ -108,9 +108,9 @@ document
     });
   });
 
-// =========================
+
 // SEARCH BUTTON
-// =========================
+
 // document.getElementById("searchBtn").addEventListener("click", function () {
 //   let text = document.getElementById("searchBox").value.toLowerCase();
 
@@ -131,9 +131,9 @@ function searchStation(el) {
   });
 }
 
-// =========================
-// FILTERS
-// =========================
+ 
+// Filters
+ 
 document.getElementById("priceFilter").addEventListener("change", applyFilters);
 document.getElementById("queueFilter").addEventListener("change", applyFilters);
 
@@ -141,7 +141,7 @@ function applyFilters() {
   const priceFilter = document.getElementById("priceFilter").value;
   const queueFilter = document.getElementById("queueFilter").value;
 
-  let filteredData;
+  let filteredData = allFeatures;
 
   //To filter Cheap
   if (priceFilter === "cheap")
@@ -152,8 +152,30 @@ function applyFilters() {
   if (priceFilter === "expensive")
     filteredData = allFeatures.filter((f) => f.price >= 951 && f.price <= 1200);
   if (priceFilter === "all_pms") filteredData = allFeatures;
+  // console.log("allFeatures");
+
+  //to filter Queue 
+  if (queueFilter === "None")
+    filteredData = filteredData.filter((f) => f.properties["Queue Status"] === "None");  
+
+  if (queueFilter === "Short")
+    filteredData = filteredData.filter((f) => f.properties["Queue Status"] === "Short");
+
+  if (queueFilter === "Medium")
+    filteredData = filteredData.filter((f) => f.properties["Queue Status"] === "Medium");
+
+  if (queueFilter === "Long")
+    filteredData = filteredData.filter((f) => f.properties["Queue Status"] === "Long");
+
+  if (queueFilter === "all")
+    filteredData = filteredData;
+  
 
   updateDashboard(filteredData);
+
+  console.log("filteredData");
+  
+  
 
   // stationLayer.eachLayer(function (layer) {
   //   let p = layer.feature.properties;
