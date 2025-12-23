@@ -1,3 +1,10 @@
+/**
+ * Port Harcourt GIS Fuel Locator
+ * © 2025 Muxty
+ * All rights reserved.
+ * Unauthorized copying or redistribution without attribution is prohibited.
+ */
+
 
 //To Initialize the map
 
@@ -10,16 +17,25 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 const input = document.getElementById("searchBox");
 const container = document.getElementById("foundList");
 
-input.addEventListener("blur", () => {
+input.addEventListener("focusout", () => {
   setTimeout(() => {
-    // Only hide if the newly focused element is NOT inside container
-    const active = document.activeElement;
-    if (!container.contains(active)) {
-      let list = document.getElementById("foundList");
-      list.innerHTML = "";
+    if (!container.contains(document.activeElement)) {
+      container.innerHTML = "";
     }
-  }, 120); // <-- key: small delay so clicks on results can run first
+  }, 150);
 });
+
+
+// input.addEventListener("blur", () => {
+//   setTimeout(() => {
+//     // Only hide if the newly focused element is NOT inside container
+//     const active = document.activeElement;
+//     if (!container.contains(active)) {
+//       let list = document.getElementById("foundList");
+//       list.innerHTML = "";
+//     }
+//   }, 120); // <-- key: small delay so clicks on results can run first
+// });
 
 let stationLayer;
 let allFeatures = []; // stores all stations
@@ -28,53 +44,84 @@ let allFeatures = []; // stores all stations
 // Loads GEOJSON
 
 fetch("map.geojson")
-  .then((res) => res.json())
-  .then((data) => {
-    allFeatures = data.features.map((f) => ({
+  .then(res => res.json())
+  .then(data => {
+
+    // Prepare data for filters & dashboard
+    allFeatures = data.features.map(f => ({
       ...f,
       price:
         Number(f.properties["Price of  PMS"]) <= 850
           ? 850
-          : Number(f.properties["Price of  PMS"]) || 0,
+          : Number(f.properties["Price of  PMS"]) || 0
     }));
 
+    // Create map layer
     stationLayer = L.geoJSON(data, {
       onEachFeature: function (feature, layer) {
-        let p = feature.properties;
+        const p = feature.properties;
+
+        // Save name for search & dashboard click
+        layer.stationName = p["Name of filling Station"];
+
+        const stationId = p["Name of filling Station"]
+          .replace(/\s+/g, "_")
+          .replace(/[^\w]/g, "");
 
         const popup = `
-                    <b>${p["Name of filling Station"]}</b><br>
-                    <b>Address:</b> ${p["Address"]}<br>
-                    <b>Nearest Road:</b> ${p["Nearest Major Road"]}<br>
-                    <b>PMS Price:</b> ₦${p["Price of  PMS"]}<br>
-                    <b>AGO Price:</b> ₦${p["Price of  A.G.O"]}<br>
-                    <b>Queue:</b> ${p["Queue Status"]}<br>
-                    <b>Pumps:</b> ${p["Number of Filling Station Pumps"]}<br>
-                    <b>Products:</b> ${p["Number of Available Petrol Product ( PMS, A.G.O, DPK, LPG, Lubricants, Others)"]}<br>
-                `;
+          <b>${p["Name of filling Station"]}</b><br>
+          <b>Address:</b> ${p["Address"]}<br>
+          <b>PMS Price:</b> ₦${p["Price of  PMS"]}<br>
+          <hr>
+
+          <b>Comments</b>
+          <div id="comments-${stationId}"
+               style="max-height:100px; overflow:auto;"></div>
+
+          <input id="input-${stationId}"
+                 placeholder="Add comment"
+                 style="width:100%; margin-top:5px;" />
+
+          <button onclick="saveComment('${stationId}')"
+                  style="width:100%; margin-top:5px;">
+            Submit
+          </button>
+        `;
 
         layer.bindPopup(popup);
+
+        layer.on("popupopen", () => {
+          renderComments(stationId);
+        });
       },
 
       pointToLayer: function (feature, latlng) {
         let price = Number(feature.properties["Price of  PMS"]) || 0;
 
-        let color = price <= 900 ? "green" : price <= 950 ? "orange" : "red";
+        let color = price <= 900
+          ? "green"
+          : price <= 950
+          ? "orange"
+          : "red";
 
         return L.circleMarker(latlng, {
           radius: 7,
           fillColor: color,
           color: "#000",
           weight: 1,
-          fillOpacity: 0.9,
+          fillOpacity: 0.9
         });
-      },
+      }
     }).addTo(map);
+
+    updateDashboard(allFeatures);
+  })
+  .catch(err => console.error("GeoJSON error:", err));
+
 
     // console.log({ allFeatures });
 
-    updateDashboard(allFeatures); // Update cheapest 5
-  });
+ 
 
 
 // SEARCH (KEYUP)
@@ -83,8 +130,8 @@ document
   .getElementById("searchBox")
   .addEventListener("keyup", async function () {
     let text = this.value.toLowerCase();
-    const res = await fetch("map.geojson");
-    const data = await res.json();
+   const data = { features: allFeatures };
+
 
     const filteredStation = data.features.filter((item) =>
       item.properties["Name of filling Station"].includes(text)
@@ -117,19 +164,45 @@ document
 //   searchStation(text);
 // });
 
-function searchStation(el) {
-  stationLayer.eachLayer(function (layer) {
-    const name = layer.feature.properties["Name of filling Station"];
+  // function searchStation(el) {
+  //   const targetName = el.dataset.name.toLowerCase().trim();
 
-    if (name.includes(el.dataset.name)) {
+  //   stationLayer.eachLayer(function (layer) {
+  //     const layerName = layer.stationName.toLowerCase().trim();
+
+  //     // reset all markers first
+  //     layer.setStyle({ radius: 7, color: "#000" });
+
+  //     if (layerName === targetName) {
+  //       layer.setStyle({ radius: 10, color: "blue" });
+  //       map.setView(layer.getLatLng(), 16);
+  //       layer.openPopup();
+  //     }
+  //   });
+  // }
+  
+  function searchStation(el) {
+  if (!stationLayer) {
+    console.warn("Map layer not ready yet");
+    return;
+  }
+
+  const targetName = el.dataset.name.toLowerCase().trim();
+
+  stationLayer.eachLayer(function (layer) {
+    const layerName = layer.stationName.toLowerCase().trim();
+
+    // reset styles
+    layer.setStyle({ radius: 7, color: "#000" });
+
+    if (layerName === targetName) {
       layer.setStyle({ radius: 10, color: "blue" });
-      map.panTo(layer.getLatLng());
+      map.setView(layer.getLatLng(), 16);
       layer.openPopup();
-    } else {
-      layer.setStyle({ radius: 7, color: "#000" });
     }
   });
 }
+
 
  
 // Filters
@@ -202,21 +275,80 @@ function applyFilters() {
 // =========================
 // DASHBOARD – CHEAPEST 5
 // =========================
-function updateDashboard(allFeatures) {
-  console.log({ allFeatures });
-  let sorted = allFeatures.sort((a, b) => a.price - b.price);
-
+function updateDashboard(features) {
+  let sorted = [...features].sort((a, b) => a.price - b.price);
   let cheapest = sorted.slice(0, 5);
 
   let list = document.getElementById("cheapestList");
   list.innerHTML = "";
 
   cheapest.forEach((station) => {
+    const name = station.properties["Name of filling Station"];
+
     list.innerHTML += `
-            <li>
-                <b>${station.properties["Name of filling Station"]}</b><br>
-                ₦${station.price}
-            </li>
-        `;
+      <li style="cursor:pointer"
+          onclick="openStationFromDashboard('${name}')">
+        <b>${name}</b><br>
+        ₦${station.price}
+      </li>
+    `;
   });
 }
+
+
+function saveComment(stationId) {
+  const input = document.getElementById(`input-${stationId}`);
+  const text = input.value.trim();
+
+  if (!text) return;
+
+  const key = `comments_${stationId}`;
+
+  let comments = JSON.parse(localStorage.getItem(key)) || [];
+
+  comments.push({
+    message: text,
+    time: new Date().toLocaleString()
+  });
+
+  localStorage.setItem(key, JSON.stringify(comments));
+
+  input.value = "";
+
+  renderComments(stationId);
+}
+
+function renderComments(stationId) {
+  const key = `comments_${stationId}`;
+  const comments = JSON.parse(localStorage.getItem(key)) || [];
+
+  const container = document.getElementById(`comments-${stationId}`);
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  comments.forEach(c => {
+    container.innerHTML += `
+      <div style="border-bottom:1px solid #ddd; margin-bottom:4px;">
+        <small>${c.time}</small><br>
+        ${c.message}
+      </div>
+    `;
+  });
+}
+ 
+function openStationFromDashboard(stationName) {
+  stationLayer.eachLayer((layer) => {
+    if (layer.stationName === stationName) {
+      map.setView(layer.getLatLng(), 16);
+      layer.openPopup();
+    }
+  });
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js")
+    .then(() => console.log("Service Worker registered"))
+    .catch(err => console.log("SW error:", err));
+}
+
